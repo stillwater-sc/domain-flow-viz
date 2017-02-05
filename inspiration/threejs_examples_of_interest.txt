@@ -1,0 +1,19 @@
+canvas_interactive_particles      selecting a particle: useful to interrogate information and computational values in the index space
+canvas_interactive_voxelpainter   ground mesh
+
+canvas_lines_colors_2d
+canvas_lines_dashed
+
+canvas_morph_targets: cool, but potentially useful to show index transformations
+
+canvas_particles_waves: the idea of changing size depending on a distance or Z value is interesting to improve understanding of an index space: distant index points should be deamphesized
+
+css3d_molecules: has the menu options and a good emphemeral canvas that is purely focused on nodes and dependencies (atoms and bonds)
+
+css3d_periodictable: great visualization morphs
+css3d_sprites: has also great morphs
+
+webgl_multiple_elements: shows how to create multiple scenes on the same page
+webgl_multiple_elements_text: shows a notebook with 3D animations interspersed
+webgl_multiple_renderers
+webgl_multiple_views
