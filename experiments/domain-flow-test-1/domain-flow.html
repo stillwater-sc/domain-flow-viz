@@ -110,6 +110,17 @@
 				light.position.set( -1, -1, 1 );
 				scene.add( light );
 
+                // Axis
+                var axes = new THREE.AxisHelper(50);
+                axes.position.set(0,0,0);
+                scene.add( axes );
+
+                // measure grid
+                var gridXZ = new THREE.GridHelper(20,1);
+                gridXZ.setColors( new THREE.Color(0x777777), new THREE.Color(0xbbbbbb));
+                gridXZ.position.set(11,-1,11);
+                scene.add( gridXZ );
+
 				root = new THREE.Group();
 				scene.add( root );
 
