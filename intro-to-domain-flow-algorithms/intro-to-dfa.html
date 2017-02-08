@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Introduction to Domain Flow Algorithms</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			* {
+				box-sizing: border-box;
+				-moz-box-sizing: border-box;
+			}
+
+			body {
+				color: #000;
+				#font-family: "Courier New";
+				font-size: 20px;
+
+				background-color: #fff;
+				margin: auto;
+				padding: .5in;
+				max-width: 10in;
+				text-align: justify;
+			}
+
+			.view {
+				width: 7in;
+				height: 7in;
+				margin: auto;
+			}
+
+			#c {
+				position: fixed;
+				left: 0px; top: 0px;
+				width: 100%;
+				height: 100%;
+				background-color: #fff;
+				z-index: -1;
+			}
+
+			#info {
+				position: absolute;
+				top: 0px; width: 6.5in;
+				padding: 0px;
+				text-align: center;
+			}
+
+			a {
+				color: #0080ff;
+			}
+
+			.math {
+
+				text-align: center;
+
+			}
+
+			.math-frac {
+
+				display: inline-block;
+				vertical-align: middle;
+
+			}
+
+			.math-num {
+
+				display: block;
+
+			}
+
+			.math-denom {
+
+				display: block;
+				border-top: 1px solid;
+
+			}
+
+			.math-sqrt {
+
+				display: inline-block;
+				transform: scale(1, 1.3);
+
+			}
+
+			.math-sqrt-stem {
+
+				display: inline-block;
+				border-top: 1px solid;
+				margin-top: 5px;
+
+			}
+
+		</style>
+	</head>
+	<body>
+
+		<canvas id="c"></canvas>
+
+		<div id="info"><a href="http://www.stillwater-sc.com" target="_blank"></a></div>
+
+		<script src="js/build/three.js"></script>
+		<script src="js/controls/OrbitControls.js"></script>
+
+		<script src="js/Detector.js"></script>
+
+		<script>
+
+			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+			var scenes = [], views, t, canvas, renderer;
+
+			window.onload = init;
+
+			function init() {
+
+				var balls = 20;
+				var size = .25;
+
+				var colors = [ 'rgb(0,127,255)', 'rgb(255,0,0)', 'rgb(0,255,0)', 'rgb(0,255,255)',
+        				       'rgb(255,0,255)', 'rgb(255,0,127)', 'rgb(255,255,0)', 'rgb(0,255,127)' ];
+
+				canvas = document.getElementById( 'c' );
+
+				renderer = new THREE.WebGLRenderer( { canvas: canvas, antialias: true } );
+				renderer.setClearColor( 0xffffff, 1 );
+				renderer.setPixelRatio( window.devicePixelRatio );
+
+				views = document.querySelectorAll( '.view' );
+
+				for ( var n = 0 ; n < views.length ; n++ ) {
+
+					var scene = new THREE.Scene();
+
+					var geometry1 = new THREE.Geometry();
+					var geometry2 = new THREE.Geometry();
+
+					if ( views[n].lattice ) {
+
+						var range = balls / 2;
+						for ( var i = -range ; i <= range ; i++ ) {
+
+							for ( var j = -range ; j <= range ; j++ ) {
+
+								for ( var k = -range ; k <= range ; k++ ) {
+
+									geometry1.vertices.push( new THREE.Vector3( i, j, k ) );
+									geometry2.vertices.push( new THREE.Vector3( i, j, k ) );
+
+								}
+
+							}
+
+						}
+
+					} else {
+
+						for ( var m = 0 ; m < Math.pow( balls, 3 ) ; m++ ) {
+
+							var i = balls * Math.random() - balls / 2;
+							var j = balls * Math.random() - balls / 2;
+							var k = balls * Math.random() - balls / 2;
+
+							geometry1.vertices.push( new THREE.Vector3( i, j, k ) );
+							geometry2.vertices.push( new THREE.Vector3( i, j, k ) );
+
+						}
+
+					}
+
+					var index = Math.floor( colors.length * Math.random() );
+
+					var canvas2 = document.createElement( 'canvas' );
+					canvas2.width = 128;
+					canvas2.height = 128;
+					var context = canvas2.getContext( '2d' );
+					context.arc( 64, 64, 64, 0, 2 * Math.PI );
+					context.fillStyle = colors[ index ];
+					context.fill();
+					var texture = new THREE.Texture( canvas2 );
+					texture.needsUpdate = true;
+
+					var material = new THREE.PointsMaterial( { size: size, map: texture, transparent: true, alphaTest: .1 } );
+
+					scene.add( new THREE.Points( geometry1, material ) );
+
+					scene.userData.view = views[n];
+					scene.userData.geometry0 = geometry2;
+
+					var camera = new THREE.PerspectiveCamera( 75, 1, .1, 100 );
+					camera.position.set( 0, 0, 1.2*balls );
+					scene.userData.camera = camera;
+
+					var controls = new THREE.OrbitControls( camera, views[n] );
+					scene.userData.controls = controls;
+
+					scenes.push( scene );
+
+				}
+
+				t = 0;
+				animate();
+
+			}
+
+			function updateSize() {
+
+				var width = canvas.clientWidth;
+				var height = canvas.clientHeight;
+
+				if ( canvas.width !== width || canvas.height != height ) {
+
+					renderer.setSize( width, height, false );
+
+				}
+
+			}
+
+			function animate() {
+
+				render();
+				requestAnimationFrame( animate );
+
+			}
+
+			function render() {
+
+				updateSize();
+
+				renderer.setClearColor( 0xffffff );
+				renderer.setScissorTest( false );
+				renderer.clear();
+
+				renderer.setClearColor( 0x000000 );
+				renderer.setScissorTest( true );
+
+				scenes.forEach( function( scene ) {
+
+					var rect = scene.userData.view.getBoundingClientRect();
+					// check if it's offscreen. If so skip it
+					if ( rect.bottom < 0 || rect.top  > renderer.domElement.clientHeight ||
+						 rect.right  < 0 || rect.left > renderer.domElement.clientWidth ) {
+						return;  // it's off screen
+					}
+					// set the viewport
+					var width  = rect.right - rect.left;
+					var height = rect.bottom - rect.top;
+					var left   = rect.left;
+					var bottom = renderer.domElement.clientHeight - rect.bottom;
+					renderer.setViewport( left, bottom, width, height );
+					renderer.setScissor( left, bottom, width, height );
+
+					renderer.render( scene, scene.userData.camera );
+
+					for ( var i = 0 ; i < scene.children[0].geometry.vertices.length ; i++ ) {
+
+						var v0 = scene.userData.geometry0.vertices[i];
+						var v = scene.userData.view.displacement( v0.x, v0.y, v0.z, t/5 );
+						scene.children[0].geometry.vertices[i].set( v.x + v0.x, v.y + v0.y, v.z + v0.z );
+
+					}
+
+					scene.children[0].geometry.verticesNeedUpdate = true;
+
+				} );
+
+				t ++;
+
+			}
+
+		</script>
+
+		<h1>Introduction to Domain Flow Algorithms</h1>
+		<p>
+			Domain Flow algorithms are parallel algorithms that incorporate the constraints of space and time.
+			By honoring the delay that is inherent to the operation of information exchange between two physically
+			separate computation or storage sites, domain flow algorithms can improve performance, and most
+			importantly, lower energy consumption, as compared to computational models that are based on sequential
+			execution.
+
+			These benefits are particularly important for embedded, real-time applications, such as computer vision,
+			sensor fusion, and in general, autonomous intelligent systems.
+		</p>
+
+
+		<p>
+			Let's take a look at an example of a simple, but valuable operator: dense matrix multiplication.
+			A Domain Flow Algorithm for matrix multiply is shown here:
+		</p>
+
+		<pre><code>
+			compute ( (i,j,k) | 1 <= i,j,k <= N ) {
+				a: a[i,j-1,k]
+				b: b[i-1,j,k]
+				c: c[i,j,k-1] + a[i,j-1,k] * b[i-1,j,k]
+			}
+		</code></pre>
+
+		<p>
+			This algorithm defines a domain of computation governed by a set of constraints, and a set of
+			computational dependencies that implicitly define a partial order. We can't execute the result
+			for c[i,j,k] until we have computed the result for c[i,j,k-1].
+		</p>
+
+		<p>
+			From an algorithm design perspective, an explicit dependency allows us to 'order' the
+			computational graph. This can be done in time, as is customary in sequential programming, where
+			we treat the dependency as an opportunity to sequence computations so that they can be executed
+			by a single computational unit that is reused. But for parallel algorithms, we can also
+			use this dependency to order the computational events in space. In the parallel design perspective,
+			we are looking for (partial) orders where independent computational events are physically separated
+			in space.
+		</p>
+
+		<p>
+			If we look back again at the domain flow algorithm of matrix multiply, we observe that all results
+			are assigned to a unique variable. This is called Single Assignment Form, and this yields a
+			computational graph that makes all computational dependencies explicit.
+
+			The second observation is that the computational events are made unique with a variable name and
+			an index tag, such as [i,j,k]. Thirdly, dependencies between computational events are specified
+			by an index expression, such as [i,j-1,k].
+		</p>
+
+		<p>
+			Why are Domain Flow Algorithms specified in this way?
+		</p>
+
+		<p>
+			To appreciate the domain flow algorithms and what they enable, you need to think about the physical
+			form a 'program evaluator', or processor, could take. In the days when a processor occupied the volume
+			of a small room, any physical computational machine was limited to a single computational element.
+			This implied that the execution of any algorithm had to be specified as a complete order in time.
+			At each step of the execution, the computational element would need to read the input operands, execute
+			an instruction, and write the results back. The reading and writing of operands was from and to a
+			Random Access Memory.
+		</p>
+
+		<p>
+			This sequential approach has been very successful, as it is a general purpose mechanism to execute
+			any algorithm. But it is not the most energy efficient approach to execute all algorithms. This is
+			the niche that domain flow fills: algorithms that exhibit complex, inherently parallel, but geometrically
+			constrained concurrency patterns offer the opportunity to be evaluated in a more energy efficient manner.
+			The venerable matrix multiply is a good introduction to this class of algorithms,
+			more formally defined by the term <i>systems of affine recurrence equations</i>.
+		</p>
+
+		<p>
+			To arrive at the underlying execution model of domain flow algorithms, we take the other extreme compared
+			to fully sequential execution.
+			Remember, nodes in the graph represent computational events, and links in the graph represent information exchanges.
+			Imagine that we have as many computational resources as there are nodes in the single assignment form
+			computational graph. In that case, we can simple 'embed' the computational graph in 3D space.
+			However, since a physical machine that would be able to evaluate a node in the graph will have
+			some physical extent, a collection of physical nodes will fill 3D space in some 'regular', crystalline
+			pattern. Or if we are conceptualizing the space presented by a VLSI chip's surface, it will be a 2D space.
+			These crystalline patterns are typically referred to as a <i>lattice</i>, and thus
+			the design of a domain flow algorithm is the act of finding space, time, and energy efficient embeddings
+			of some computational graph in N-dimensional space.
+		</p>
+
+		<p>
+			Back to our matrix multiply. We can now reinterpret the domain flow algorithm. Each index, i, j, k, can
+			be interpreted as a dimension in 3D space. And thus an index tag, such as [i,j,k] can be interpreted as
+			a location in 3D space, more accurately, a location in the 3D Cartesian lattice.
+
+			This is what that lattice would look like:
+		</p>
+
+		<div class="view">
+
+		<script>
+
+			var parent = document.scripts[ document.scripts.length - 1 ].parentNode;
+
+			parent.displacement = function( x, y, z, t ) {
+
+				return new THREE.Vector3( 0, 0, 0);
+
+			};
+
+			parent.lattice = true;
+
+		</script>
+
+		</div>
+
+		<p>
+			We alluded to the fact that inherently parallel algorithms exhibit some partial order and not a complete
+			order. This extra degree of freedom as compared to the complete order defined by sequential algorithms
+			is another differentiator of domain flow algorithms. It allows the execution engine to organize any
+			resource contention in a more energy efficient way, as long the machine does not violate the dependency
+			relationships.
+		</p>
+
+		<p>
+			Below we show the 'free' schedule of the matrix multiply domain flow algorithm:
+		</p>
+		<div class="view">
+
+		<script>
+
+			var parent = document.scripts[ document.scripts.length - 1 ].parentNode;
+
+			parent.displacement = function( x, y, z, t ) {
+
+				return new THREE.Vector3( x, y, z);
+
+			};
+
+			parent.lattice = false;
+
+		</script>
+
+		</div>
+
+
+
+
+	</body>
+</html>
