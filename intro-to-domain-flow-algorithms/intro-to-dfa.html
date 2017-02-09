@@ -48,6 +48,10 @@
 				color: #0080ff;
 			}
 
+			theo {
+				color: #a0a0a0;
+			}
+
 			.math {
 
 				text-align: center;
@@ -99,12 +103,13 @@
 
 		<script src="js/build/three.js"></script>
 		<script src="js/controls/OrbitControls.js"></script>
-
 		<script src="js/Detector.js"></script>
 
 		<script>
 
 			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+            console.log(document.scripts.length);
 
 			var scenes = [], views, t, canvas, renderer;
 
@@ -296,7 +301,7 @@
 
 		<p>
 			This algorithm defines a domain of computation governed by a set of constraints, and a set of
-			computational dependencies that implicitly define a partial order. We can't execute the result
+			computational dependencies that implicitly define a partial order. For example, we can't execute the result
 			for c[i,j,k] until we have computed the result for c[i,j,k-1].
 		</p>
 
@@ -320,9 +325,7 @@
 			by an index expression, such as [i,j-1,k].
 		</p>
 
-		<p>
-			Why are Domain Flow Algorithms specified in this way?
-		</p>
+		<h2>Why are Domain Flow Algorithms specified this way?</h2>
 
 		<p>
 			To appreciate the domain flow algorithms and what they enable, you need to think about the physical
@@ -358,11 +361,13 @@
 		</p>
 
 		<p>
-			Back to our matrix multiply. We can now reinterpret the domain flow algorithm. Each index, i, j, k, can
-			be interpreted as a dimension in 3D space. And thus an index tag, such as [i,j,k] can be interpreted as
-			a location in 3D space, more accurately, a location in the 3D Cartesian lattice.
-
-			This is what that lattice would look like:
+			Back to our matrix multiply. We can now reinterpret the domain flow algorithm as a physical embedding.
+			Each index range, that is, the i, j, and k in the constraint set, can be seen as a dimension in 3D space.
+			The index tag, such as [i,j,k] can then be interpreted as a location in 3D space, more accurately,
+			a location in the 3D Cartesian lattice.
+		</p>
+		<p>
+			This is what that lattice looks like for a given N:
 		</p>
 
 		<div class="view">
@@ -384,16 +389,26 @@
 		</div>
 
 		<p>
-			We alluded to the fact that inherently parallel algorithms exhibit some partial order and not a complete
-			order. This extra degree of freedom as compared to the complete order defined by sequential algorithms
-			is another differentiator of domain flow algorithms. It allows the execution engine to organize any
-			resource contention in a more energy efficient way, as long the machine does not violate the dependency
-			relationships.
+			We alluded to the fact that inherently-parallel algorithms exhibit some partial order and not a complete order
+			because the instructions that can execute independently do not have any explicit order among each other.
+			This extra degree of freedom is another benefit domain flow algorithms exhibit over sequential algorithms.
+			It allows the execution engine to organize any resource contention in a more energy, space, or time efficient way,
+			as long the machine does not violate the dependency	relationships specified in the algorithm.
+		</p>
+		<p>
+			Typically, the complete order defined by sequential algorithms over-constrains the execution order, and
+			parallelizing compilers can't recover the inherent dependency structure of the mathematics behind the algorithm,
+			leading to disappointing speed-ups. This is a fundamental limitation to trying to generate parallel
+			execution models from sequential specifications.
+
+			Instead, the domain flow specification removes this over-constraint and only expresses the data dependencies.
+			If we would present the algorithm with instantaneous access to its inputs, then the
+			data dependencies inherent to the algorithm would evolve in what is called the free schedule.
+		</p>
+		<p>
+			The free schedule for our matrix multiply is visualized in the following simulation.
 		</p>
 
-		<p>
-			Below we show the 'free' schedule of the matrix multiply domain flow algorithm:
-		</p>
 		<div class="view">
 
 		<script>
@@ -402,7 +417,7 @@
 
 			parent.displacement = function( x, y, z, t ) {
 
-				return new THREE.Vector3( x, y, z);
+				return new THREE.Vector3( Math.sin(x - t), 0, 0);
 
 			};
 
@@ -411,9 +426,6 @@
 		</script>
 
 		</div>
-
-
-
 
 	</body>
 </html>
