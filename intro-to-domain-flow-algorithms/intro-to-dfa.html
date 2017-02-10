@@ -107,9 +107,7 @@
 
 		<script>
 
-			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
-
-            console.log(document.scripts.length);
+			if ( ! Detector.webgl ) Detector.addGetWebGLMessage()
 
 			var scenes = [], views, t, canvas, renderer;
 
@@ -177,7 +175,8 @@
 					canvas2.width = 128;
 					canvas2.height = 128;
 					var context = canvas2.getContext( '2d' );
-					context.arc( 64, 64, 64, 0, 2 * Math.PI );
+					context.rect(64,64,64,64);
+					// context.arc( 64, 64, 64, 0, 2 * Math.PI );
 					context.fillStyle = colors[ index ];
 					context.fill();
 					var texture = new THREE.Texture( canvas2 );
