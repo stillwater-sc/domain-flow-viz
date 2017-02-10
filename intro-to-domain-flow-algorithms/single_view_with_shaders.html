@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Testing render targets</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+        <style>
+            * {
+                box-sizing: border-box;
+                -moz-box-sizing: border-box;
+            }
+
+            body {
+                color: #000;
+                font-size: 20px;
+
+                background-color: #fff;
+                margin: auto;
+                padding: .5in;
+                max-width: 10in;
+                text-align: justify;
+            }
+
+            #index_space_view {
+                width: 7in;
+                height: 7in;
+                margin: auto;
+            }
+
+            #c {
+                position: fixed;
+                left: 0px; top: 0px;
+                width: 100%;
+                height: 100%;
+                background-color: #fff;
+                z-index: -1;
+            }
+
+            #info {
+                position: absolute;
+                top: 0px; width: 6.5in;
+                padding: 0px;
+                text-align: center;
+            }
+
+        </style>
+    </head>
+    <body>
+        <canvas id="c"></canvas>
+
+        <script src="js/build/three.js"></script>
+        <script src="js/controls/OrbitControls.js"></script>
+        <script src="js/Detector.js"></script>
+
+        <script type="x-shader/x-vertex" id="vertexshader">
+
+			attribute float size;
+			attribute vec3 customColor;
+
+			varying vec3 vColor;
+
+			void main() {
+
+				vColor = customColor;
+
+				vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+
+				gl_PointSize = size * ( 300.0 / -mvPosition.z );
+
+				gl_Position = projectionMatrix * mvPosition;
+
+			}
+
+		</script>
+
+        <script type="x-shader/x-fragment" id="fragmentshader">
+
+			uniform vec3 color;
+			uniform sampler2D texture;
+
+			varying vec3 vColor;
+
+			void main() {
+
+				gl_FragColor = vec4( color * vColor, 1.0 );
+
+				gl_FragColor = gl_FragColor * texture2D( texture, gl_PointCoord );
+
+				if ( gl_FragColor.a < ALPHATEST ) discard;
+
+			}
+
+		</script>
+
+        <script>
+            if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+            var scenes = [];
+
+            var canvas, renderer;
+
+            var PARTICLE_SIZE = 20;
+
+            var raycaster, intersects;
+            var mosue, INTERSECTED;
+
+            window.onload = init;
+
+            function init() {
+                var balls = 20;
+                var size = 0.25;
+
+                canvas = document.getElementById( 'c' );
+
+                renderer = new THREE.WebGLRenderer( { canvas: canvas, antialias: true } );
+                renderer.setClearColor( 0xffffff );
+                renderer.setPixelRatio( window.devicePixelRatio );
+
+                var view = document.getElementById( 'index_space_view' );
+
+                var scene = createIndexSpaceScene();
+                scene.userData.view = view;
+
+                var camera = new THREE.PerspectiveCamera( 75, 1, 0.1, 100 );
+                camera.position.set( 0, 0, 500 );
+                scene.userData.camera = camera;
+
+                var controls = new THREE.OrbitControls( camera, view );
+                controls.minDistance = 200;
+                controls.maxDistance = 500;
+                scene.userData.controls = controls;
+
+                scenes.push( scene );
+
+                animate();
+            }
+
+            function updateSize() {
+                var width = canvas.clientWidth;
+                var height = canvas.clientHeight;
+
+                if ( canvas.width != width || canvas.height != height ) {
+                    renderer.setSize( width, height, false );
+                }
+            }
+
+            function animate() {
+                render();
+                requestAnimationFrame( animate );
+            }
+
+            function render() {
+                updateSize();
+
+                renderer.setClearColor( 0xffffff );
+                renderer.setScissorTest( false );
+                renderer.clear();
+
+                renderer.setClearColor( 0x000000 );
+                renderer.setScissorTest( true );
+
+                scenes.forEach( function( scene ) {
+                    var rect = scene.userData.view.getBoundingClientRect();
+                    // check if it is off-screen
+                    if ( rect.bottom < 0 || rect.top > renderer.domElement.clientHeight ||
+                         rect.right < 0 || rect.left > renderer.domElement.clientWidth) {
+                        return; // it is off-screen
+                    }
+                    // set the viewport
+                    var width  = rect.right - rect.left;
+                    var height = rect.bottom - rect.top;
+                    var left   = rect.left;
+                    var bottom = renderer.domElement.clientHeight - rect.bottom;
+                    renderer.setViewport( left, bottom, width, height );
+                    renderer.setScissor( left, bottom, width, height );
+
+                    renderer.render( scene, scene.userData.camera );
+
+                    scene.children[0].geometry.verticesNeedUpdate = true;
+                });
+            }
+            function createIndexSpaceScene() {
+                var scene = new THREE.Scene();
+                var geometry1 = new THREE.BoxGeometry( 200, 200, 200, 16, 16, 16 );
+                var vertices = geometry1.vertices;
+
+                var positions = new Float32Array( vertices.length * 3 );
+                var colors    = new Float32Array( vertices.length * 3 );
+                var sizes     = new Float32Array( vertices.length );
+
+                var vertex;
+                var color = new THREE.Color();
+
+                for ( var i = 0, l = vertices.length; i < l; i++ ) {
+                    vertex = vertices[i];
+                    vertex.toArray( positions, i * 3 );
+
+                    color.setHSL( 0.01 + 0.1 * ( i / l ), 1.0, 0.5 );
+                    color.toArray( colors, i * 3 );
+
+                    sizes[ i ] = PARTICLE_SIZE * 0.5;
+                }
+
+                var geometry = new THREE.BufferGeometry();
+                geometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
+                geometry.addAttribute( 'customColor', new THREE.BufferAttribute( colors, 3 ) );
+                geometry.addAttribute( 'size', new THREE.BufferAttribute( sizes, 1 ) );
+
+                var material = new THREE.ShaderMaterial( {
+                    uniforms: {
+                        color:    { value: new THREE.Color( 0xffffff ) },
+                        texture:  { value: new THREE.TextureLoader().load( "textures/sprites/disc.png" ) }
+                    },
+                    vertexShader: document.getElementById( 'vertexshader' ).textContent,
+                    fragmentShader: document.getElementById( 'fragmentshader' ).textContent,
+
+                    alphaTest: 0.9
+                } );
+
+                particles = new THREE.Points( geometry, material );
+                scene.add( particles );
+
+                return scene;
+            }
+        </script>
+
+        <h1>Test 1</h1>
+        <p>This is a simple Index Space View using point geometry with fragment shaders:</p>
+        <div id="index_space_view"></div>
+    </body>
+</html>
