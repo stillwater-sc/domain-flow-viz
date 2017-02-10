@@ -28,6 +28,12 @@
 				margin: auto;
 			}
 
+			#index_view {
+				width: 7in;
+				height: 7in;
+				margin: auto;
+			}
+
 			#c {
 				position: fixed;
 				left: 0px; top: 0px;
@@ -46,10 +52,6 @@
 
 			a {
 				color: #0080ff;
-			}
-
-			theo {
-				color: #a0a0a0;
 			}
 
 			.math {
@@ -107,7 +109,7 @@
 
 		<script>
 
-			if ( ! Detector.webgl ) Detector.addGetWebGLMessage()
+			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
 			var scenes = [], views, t, canvas, renderer;
 
@@ -369,7 +371,7 @@
 			This is what that lattice looks like for a given N:
 		</p>
 
-		<div class="view">
+		<div id="index_view">
 
 		<script>
 
