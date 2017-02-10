@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Testing render targets</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+        <style>
+            * {
+                box-sizing: border-box;
+                -moz-box-sizing: border-box;
+            }
+
+            body {
+                color: #000;
+                font-size: 20px;
+
+                background-color: #fff;
+                margin: auto;
+                padding: .5in;
+                max-width: 10in;
+                text-align: justify;
+            }
+
+            #index_space_view {
+                width: 7in;
+                height: 7in;
+                margin: auto;
+            }
+
+            #c {
+                position: fixed;
+                left: 0px; top: 0px;
+                width: 100%;
+                height: 100%;
+                background-color: #fff;
+                z-index: -1;
+            }
+
+            #info {
+                position: absolute;
+                top: 0px; width: 6.5in;
+                padding: 0px;
+                text-align: center;
+            }
+
+        </style>
+    </head>
+    <body>
+        <canvas id="c"></canvas>
+
+        <script src="js/build/three.js"></script>
+        <script src="js/controls/OrbitControls.js"></script>
+        <script src="js/Detector.js"></script>
+
+        <script>
+            if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+            var scenes = [];
+            //var views = [];
+            var canvas, renderer;
+
+            window.onload = init;
+
+            function init() {
+                var balls = 20;
+                var size = 0.25;
+
+                canvas = document.getElementById( 'c' );
+
+                renderer = new THREE.WebGLRenderer( { canvas: canvas, antialias: true } );
+                renderer.setClearColor( 0xffffff );
+                renderer.setPixelRatio( window.devicePixelRatio );
+
+                var view = document.getElementById( 'index_space_view' );
+
+                var scene = createIndexSpaceScene(balls, size);
+                scene.userData.view = view;
+
+                var camera = new THREE.PerspectiveCamera( 75, 1, 0.1, 100 );
+                camera.position.set( 0, 0, 1.2 * balls );
+                scene.userData.camera = camera;
+
+                var controls = new THREE.OrbitControls( camera, view );
+                scene.userData.controls = controls;
+
+                scenes.push( scene );
+
+                animate();
+            }
+
+            function updateSize() {
+                var width = canvas.clientWidth;
+                var height = canvas.clientHeight;
+
+                if ( canvas.width != width || canvas.height != height ) {
+                    renderer.setSize( width, height, false );
+                }
+            }
+
+            function animate() {
+                render();
+                requestAnimationFrame( animate );
+            }
+
+            function render() {
+                updateSize();
+
+                renderer.setClearColor( 0xffffff );
+                renderer.setScissorTest( false );
+                renderer.clear();
+
+                renderer.setClearColor( 0x000000 );
+                renderer.setScissorTest( true );
+
+                scenes.forEach( function( scene ) {
+                    var rect = scene.userData.view.getBoundingClientRect();
+                    // check if it is off-screen
+                    if ( rect.bottom < 0 || rect.top > renderer.domElement.clientHeight ||
+                         rect.right < 0 || rect.left > renderer.domElement.clientWidth) {
+                        return; // it is off-screen
+                    }
+                    // set the viewport
+                    var width  = rect.right - rect.left;
+                    var height = rect.bottom - rect.top;
+                    var left   = rect.left;
+                    var bottom = renderer.domElement.clientHeight - rect.bottom;
+                    renderer.setViewport( left, bottom, width, height );
+                    renderer.setScissor( left, bottom, width, height );
+
+                    renderer.render( scene, scene.userData.camera );
+
+                    scene.children[0].geometry.verticesNeedUpdate = true;
+                });
+            }
+            function createIndexSpaceScene( nrOfPoints, pointSize ) {
+                var index_space_viewer = document.getElementById( 'index_space_view' );
+
+                var scene = new THREE.Scene();
+                var lattice = new THREE.Geometry();
+
+                var range = nrOfPoints / 2;
+                for ( var i = -range; i <= range; i++ ) {
+                    for ( var j = -range; j <= range; j++ ) {
+                        for ( var k = -range; k <= range; k++ ) {
+                            lattice.vertices.push( new THREE.Vector3( i, j, k ) );
+                        }
+                    }
+                }
+
+                // create a texture showing a tiny circle to put on the lattice points
+                var canvas = document.createElement( 'canvas' );
+                canvas.width = 128;
+                canvas.height = 128;
+                var context = canvas.getContext( '2d' );
+                context.arc( 64, 64, 64, 0, 2 * Math.PI );
+                context.fillStyle = 'rgb(255,0,0)';
+                context.fill();
+                var texture = new THREE.Texture( canvas );
+                texture.needsUpdate = true;
+
+                // set the material properties for the vertices
+                var material = new THREE.PointsMaterial( { size: pointSize, map: texture, transparent: true, alphaTest: 0.1 } );
+                scene.add( new THREE.Points( lattice, material ) );
+
+                return scene;
+            }
+        </script>
+
+        <h1>Test 1</h1>
+        <p>This is a simple Index Space View using point geometry with a circle texture:</p>
+        <div id="index_space_view"></div>
+    </body>
+</html>
