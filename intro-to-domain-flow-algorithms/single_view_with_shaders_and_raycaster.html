@@ -95,11 +95,13 @@
         <script>
             if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
-            var scenes = [];   // we really aren't using multiple scenes, but I kept it in for illustration purposes
+            var scenes = [];
 
             var canvas, renderer;
 
             var PARTICLE_SIZE = 20;
+            var raycaster, intersects;
+            var mouse, INTERSECTED;
 
             window.onload = init;
 
@@ -128,6 +130,10 @@
 
                 scenes.push( scene );
 
+                raycaster = new THREE.Raycaster();
+                mouse = new THREE.Vector2();
+                document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+
                 animate();
             }
 
@@ -138,6 +144,16 @@
                 if ( canvas.width != width || canvas.height != height ) {
                     renderer.setSize( width, height, false );
                 }
+            }
+
+            // TODO: the mouse coordinates don't align with the viewport
+            function onDocumentMouseMove( event ) {
+
+                event.preventDefault();
+
+                mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+                mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
             }
 
             function animate() {
@@ -157,6 +173,8 @@
                 renderer.setScissorTest( true );
                 */
 
+
+
                 scenes.forEach( function( scene ) {
                     var rect = scene.userData.view.getBoundingClientRect();
                     // check if it is off-screen
@@ -172,7 +190,37 @@
                     renderer.setViewport( left, bottom, width, height );
                     renderer.setScissor( left, bottom, width, height );
 
+                    var camera = scene.userData.camera;
+                    var geometry = particles.geometry;
+                    var attributes = geometry.attributes;
+
+                    raycaster.setFromCamera( mouse, camera );
+
+                    intersects = raycaster.intersectObject( particles );
+
+                    if ( intersects.length > 0 ) {
+
+                        if ( INTERSECTED != intersects[ 0 ].index ) {
+
+                            attributes.size.array[ INTERSECTED ] = PARTICLE_SIZE;
+
+                            INTERSECTED = intersects[ 0 ].index;
+
+                            attributes.size.array[ INTERSECTED ] = PARTICLE_SIZE * 1.25;
+                            attributes.size.needsUpdate = true;
+
+                        }
+
+                    } else if ( INTERSECTED !== null ) {
+
+                        attributes.size.array[ INTERSECTED ] = PARTICLE_SIZE;
+                        attributes.size.needsUpdate = true;
+                        INTERSECTED = null;
+
+                    }
+
                     renderer.render( scene, scene.userData.camera );
+
 
                     scene.children[0].geometry.verticesNeedUpdate = true;
                 });

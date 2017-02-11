@@ -108,7 +108,6 @@
 
 				scene = new THREE.Scene();
 				scene.userData.view = views[0];
-                console.log(views[0]);
 
 				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
 				camera.position.z = 250;
@@ -121,14 +120,12 @@
                 controls.enableZoom = true;
                 scene.userData.controls = controls;
 
-				//
-
 				var geometry1 = new THREE.BoxGeometry( 200, 200, 200, 16, 16, 16 );
-				var vertices = geometry1.vertices;
+				var vertices  = geometry1.vertices;
 
 				var positions = new Float32Array( vertices.length * 3 );
-				var colors = new Float32Array( vertices.length * 3 );
-				var sizes = new Float32Array( vertices.length );
+				var colors    = new Float32Array( vertices.length * 3 );
+				var sizes     = new Float32Array( vertices.length );
 
 				var vertex;
 				var color = new THREE.Color();
@@ -254,23 +251,6 @@
 
 				}
 
-				var element = scene.userData.view;
-
-				/*
-                var rect = element.getBoundingClientRect();
-                // check if it's offscreen. If so skip it
-                if ( rect.bottom < 0 || rect.top  > renderer.domElement.clientHeight ||
-                    rect.right  < 0 || rect.left > renderer.domElement.clientWidth ) {
-                    return;  // it's off screen
-                }
-                // set the viewport
-                var width  = rect.right - rect.left;
-                var height = rect.bottom - rect.top;
-                var left   = rect.left;
-                var bottom = renderer.domElement.clientHeight - rect.bottom;
-                renderer.setViewport( left, bottom, width, height );
-                renderer.setScissor( left, bottom, width, height );
-*/
                 renderer.render( scene, scene.userData.camera );
 
                 // renderer.render( scene, camera );
