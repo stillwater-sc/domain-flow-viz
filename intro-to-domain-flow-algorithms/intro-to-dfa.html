@@ -28,7 +28,13 @@
 				margin: auto;
 			}
 
-			#index_view {
+			#index_space_view_1 {
+				width: 7in;
+				height: 7in;
+				margin: auto;
+			}
+
+			#index_space_view_2 {
 				width: 7in;
 				height: 7in;
 				margin: auto;
@@ -106,100 +112,80 @@
 		<script src="js/build/three.js"></script>
 		<script src="js/controls/OrbitControls.js"></script>
 		<script src="js/Detector.js"></script>
+		<script type="x-shader/x-vertex" id="vertexshader">
 
+			attribute float size;
+			attribute vec3 customColor;
+
+			varying vec3 vColor;
+
+			void main() {
+
+				vColor = customColor;
+
+				vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+
+				gl_PointSize = size * ( 300.0 / -mvPosition.z );
+
+				gl_Position = projectionMatrix * mvPosition;
+
+			}
+
+		</script>
+
+		<script type="x-shader/x-fragment" id="fragmentshader">
+
+			uniform vec3 color;
+			uniform sampler2D texture;
+
+			varying vec3 vColor;
+
+			void main() {
+
+				gl_FragColor = vec4( color * vColor, 1.0 );
+
+				gl_FragColor = gl_FragColor * texture2D( texture, gl_PointCoord );
+
+				if ( gl_FragColor.a < ALPHATEST ) discard;
+
+			}
+
+		</script>
 		<script>
-
 			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
 
-			var scenes = [], views, t, canvas, renderer;
+			var scenes = [];
+			var views = [];
+			var t, canvas, renderer;
+			var PARTICLE_SIZE = 20;
 
 			window.onload = init;
 
 			function init() {
+                canvas = document.getElementById( 'c' );
 
-				var balls = 20;
-				var size = .25;
+                renderer = new THREE.WebGLRenderer( { canvas: canvas, antialias: true } );
+                renderer.setClearColor( 0xffffff );
+                renderer.setPixelRatio( window.devicePixelRatio );
 
-				var colors = [ 'rgb(0,127,255)', 'rgb(255,0,0)', 'rgb(0,255,0)', 'rgb(0,255,255)',
-        				       'rgb(255,0,255)', 'rgb(255,0,127)', 'rgb(255,255,0)', 'rgb(0,255,127)' ];
+                views.push( document.getElementById( 'index_space_view_1' ) );
+                views.push( document.getElementById( 'index_space_view_2' ) );
 
-				canvas = document.getElementById( 'c' );
+                for ( var i = 0; i < views.length; i++ ) {
+                    var scene = createIndexSpaceScene();
+                    scene.userData.view = views[i];
 
-				renderer = new THREE.WebGLRenderer( { canvas: canvas, antialias: true } );
-				renderer.setClearColor( 0xffffff, 1 );
-				renderer.setPixelRatio( window.devicePixelRatio );
+                    // PerspectiveCamera ( fov, aspectRatio, near clipping plane, var clipping plane )
+                    var camera = new THREE.PerspectiveCamera( 75, 1, 0.1, 10000 );
+                    camera.position.set( 0, 0, 250 );   // ( x = 0, y = 0, z = 250 )
+                    scene.userData.camera = camera;
 
-				views = document.querySelectorAll( '.view' );
+                    var controls = new THREE.OrbitControls( camera, views[i] );
+                    controls.minDistance = 200;   // zoom can't zoom in further than z = 200
+                    controls.maxDistance = 500;   // zoom can't zoom out further than z = 500
+                    scene.userData.controls = controls;
 
-				for ( var n = 0 ; n < views.length ; n++ ) {
-
-					var scene = new THREE.Scene();
-
-					var geometry1 = new THREE.Geometry();
-					var geometry2 = new THREE.Geometry();
-
-					if ( views[n].lattice ) {
-
-						var range = balls / 2;
-						for ( var i = -range ; i <= range ; i++ ) {
-
-							for ( var j = -range ; j <= range ; j++ ) {
-
-								for ( var k = -range ; k <= range ; k++ ) {
-
-									geometry1.vertices.push( new THREE.Vector3( i, j, k ) );
-									geometry2.vertices.push( new THREE.Vector3( i, j, k ) );
-
-								}
-
-							}
-
-						}
-
-					} else {
-
-						for ( var m = 0 ; m < Math.pow( balls, 3 ) ; m++ ) {
-
-							var i = balls * Math.random() - balls / 2;
-							var j = balls * Math.random() - balls / 2;
-							var k = balls * Math.random() - balls / 2;
-
-							geometry1.vertices.push( new THREE.Vector3( i, j, k ) );
-							geometry2.vertices.push( new THREE.Vector3( i, j, k ) );
-
-						}
-
-					}
-
-					var index = Math.floor( colors.length * Math.random() );
-
-					var canvas2 = document.createElement( 'canvas' );
-					canvas2.width = 128;
-					canvas2.height = 128;
-					var context = canvas2.getContext( '2d' );
-					context.rect(64,64,64,64);
-					// context.arc( 64, 64, 64, 0, 2 * Math.PI );
-					context.fillStyle = colors[ index ];
-					context.fill();
-					var texture = new THREE.Texture( canvas2 );
-					texture.needsUpdate = true;
-
-					var material = new THREE.PointsMaterial( { size: size, map: texture, transparent: true, alphaTest: .1 } );
-
-					scene.add( new THREE.Points( geometry1, material ) );
-
-					scene.userData.view = views[n];
-					scene.userData.geometry0 = geometry2;
-
-					var camera = new THREE.PerspectiveCamera( 75, 1, .1, 100 );
-					camera.position.set( 0, 0, 1.2*balls );
-					scene.userData.camera = camera;
-
-					var controls = new THREE.OrbitControls( camera, views[n] );
-					scene.userData.controls = controls;
-
-					scenes.push( scene );
-
+                    scenes.push( scene );
 				}
 
 				t = 0;
@@ -208,29 +194,23 @@
 			}
 
 			function updateSize() {
-
 				var width = canvas.clientWidth;
 				var height = canvas.clientHeight;
 
 				if ( canvas.width !== width || canvas.height != height ) {
-
 					renderer.setSize( width, height, false );
-
 				}
-
 			}
 
 			function animate() {
-
 				render();
 				requestAnimationFrame( animate );
-
 			}
 
 			function render() {
-
 				updateSize();
 
+				// the ScissorTest machinery is needed to make the viewport clipping to work properly.
 				renderer.setClearColor( 0xffffff );
 				renderer.setScissorTest( false );
 				renderer.clear();
@@ -241,11 +221,13 @@
 				scenes.forEach( function( scene ) {
 
 					var rect = scene.userData.view.getBoundingClientRect();
-					// check if it's offscreen. If so skip it
+
+					// check if it's off-screen. If so skip it
 					if ( rect.bottom < 0 || rect.top  > renderer.domElement.clientHeight ||
 						 rect.right  < 0 || rect.left > renderer.domElement.clientWidth ) {
-						return;  // it's off screen
+						return;  // it's off-screen so skip the renderering
 					}
+
 					// set the viewport
 					var width  = rect.right - rect.left;
 					var height = rect.bottom - rect.top;
@@ -256,21 +238,56 @@
 
 					renderer.render( scene, scene.userData.camera );
 
-					for ( var i = 0 ; i < scene.children[0].geometry.vertices.length ; i++ ) {
-
-						var v0 = scene.userData.geometry0.vertices[i];
-						var v = scene.userData.view.displacement( v0.x, v0.y, v0.z, t/5 );
-						scene.children[0].geometry.vertices[i].set( v.x + v0.x, v.y + v0.y, v.z + v0.z );
-
-					}
-
 					scene.children[0].geometry.verticesNeedUpdate = true;
 
 				} );
 
 				t ++;
-
 			}
+
+            function createIndexSpaceScene() {
+                var scene = new THREE.Scene();
+                var geometry1 = new THREE.BoxGeometry( 200, 200, 200, 16, 16, 16 );
+                var vertices = geometry1.vertices;
+
+                var positions = new Float32Array( vertices.length * 3 );
+                var colors    = new Float32Array( vertices.length * 3 );
+                var sizes     = new Float32Array( vertices.length );
+
+                var vertex;
+                var color = new THREE.Color();
+
+                for ( var i = 0, l = vertices.length; i < l; i++ ) {
+                    vertex = vertices[i];
+                    vertex.toArray( positions, i * 3 );
+
+                    color.setHSL( 0.01 + 0.1 * ( i / l ), 1.0, 0.5 );
+                    color.toArray( colors, i * 3 );
+
+                    sizes[ i ] = PARTICLE_SIZE * 0.5;
+                }
+
+                var geometry = new THREE.BufferGeometry();
+                geometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
+                geometry.addAttribute( 'customColor', new THREE.BufferAttribute( colors, 3 ) );
+                geometry.addAttribute( 'size', new THREE.BufferAttribute( sizes, 1 ) );
+
+                var material = new THREE.ShaderMaterial( {
+                    uniforms: {
+                        color:    { value: new THREE.Color( 0xffffff ) },
+                        texture:  { value: new THREE.TextureLoader().load( "textures/sprites/ball.png" ) }
+                    },
+                    vertexShader: document.getElementById( 'vertexshader' ).textContent,
+                    fragmentShader: document.getElementById( 'fragmentshader' ).textContent,
+
+                    alphaTest: 0.9
+                } );
+
+                particles = new THREE.Points( geometry, material );
+                scene.add( particles );
+
+                return scene;
+            }
 
 		</script>
 
@@ -371,23 +388,7 @@
 			This is what that lattice looks like for a given N:
 		</p>
 
-		<div id="index_view">
-
-		<script>
-
-			var parent = document.scripts[ document.scripts.length - 1 ].parentNode;
-
-			parent.displacement = function( x, y, z, t ) {
-
-				return new THREE.Vector3( 0, 0, 0);
-
-			};
-
-			parent.lattice = true;
-
-		</script>
-
-		</div>
+		<div id="index_space_view_1">_</div>
 
 		<p>
 			We alluded to the fact that inherently-parallel algorithms exhibit some partial order and not a complete order
@@ -410,23 +411,7 @@
 			The free schedule for our matrix multiply is visualized in the following simulation.
 		</p>
 
-		<div class="view">
-
-		<script>
-
-			var parent = document.scripts[ document.scripts.length - 1 ].parentNode;
-
-			parent.displacement = function( x, y, z, t ) {
-
-				return new THREE.Vector3( Math.sin(x - t), 0, 0);
-
-			};
-
-			parent.lattice = false;
-
-		</script>
-
-		</div>
+		<div id="index_space_view_2">_</div>
 
 	</body>
 </html>

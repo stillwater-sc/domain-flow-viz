@@ -78,7 +78,7 @@
                 renderer.setPixelRatio( window.devicePixelRatio );
 
                 // create a texture showing a tiny circle to put on the lattice points
-                var circleTexture = createCirleTexture();
+                var circleTexture = createCircleTexture();
                 var squareTexture = createSquareTexture();
 
                 var view1 = document.getElementById( 'index_space_view_1' );
@@ -89,7 +89,7 @@
                 var cnt = 0;
                 views.forEach( function( view ) {
                     var texture;
-                    if (cnt === 0) {
+                    if (cnt === 0) {  // this is horrible way to specialize the view
                         texture = circleTexture;
                     } else {
                         texture = squareTexture;
@@ -178,7 +178,7 @@
                 return scene;
             }
 
-            function createCirleTexture() {
+            function createCircleTexture() {
                 // create a texture showing a tiny circle to put on the lattice points
                 var canvas = document.createElement( 'canvas' );
                 canvas.width = 128;
