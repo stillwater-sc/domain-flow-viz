@@ -281,12 +281,12 @@
                         color:       { value: new THREE.Color( 0xffffff ) },
                         texture:     { value: new THREE.TextureLoader().load( "textures/sprites/ball.png" ) }
                     };
-                    var scene = createWavefrontScene( lattice, pointSize, 'wavefrontshader', uniforms1 );
+                    var scene = createWavefrontScene( lattice, pointSize, 'wavefrontshader', uniforms1, schedule );
                     scene.userData.view = views[1];
 
                     // PerspectiveCamera ( fov, aspectRatio, near clipping plane, var clipping plane )
                     var camera = new THREE.PerspectiveCamera( 75, 1, 0.1, 1000 );
-                    camera.position.set( 25, 25, 25 );   // ( x = 25, y = 25, z = 25 )
+                    camera.position.set( 0, 0, 25 );   // ( x = 25, y = 25, z = 25 )
                     scene.userData.camera = camera;
 
                     var controls = new THREE.OrbitControls( camera, views[1] );
@@ -308,7 +308,7 @@
                         color:       { value: new THREE.Color( 0xffffff ) },
                         texture:     { value: new THREE.TextureLoader().load( "textures/sprites/ball.png" ) }
                     };
-                    var scene = createWavefrontScene( lattice, pointSize, 'wavefrontshader2', uniforms2 );
+                    var scene = createWavefrontScene( lattice, pointSize, 'wavefrontshader2', uniforms2, schedule );
                     scene.userData.view = views[2];
 
                     // PerspectiveCamera ( fov, aspectRatio, near clipping plane, var clipping plane )
@@ -457,7 +457,7 @@
                 return scene;
             }
 
-            function createWavefrontScene( lattice, pointSize, shader, uniforms ) {
+            function createWavefrontScene( lattice, pointSize, shader, uniforms, timingFunction ) {
                 var scene = new THREE.Scene();
                 // var geometry1 = new THREE.BoxGeometry( 200, 200, 200, 16, 16, 16 );
                 var vertices = lattice.vertices;
@@ -479,7 +479,7 @@
 
                     sizes[ i ] = pointSize;
 
-                    timing[ i ] = schedule( [ vertex.x, vertex.y, vertex.z ]);
+                    timing[ i ] = timingFunction( [ vertex.x, vertex.y, vertex.z ]);
                 }
 
                 var geometry = new THREE.BufferGeometry();
