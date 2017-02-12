@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<title>Introduction to Domain Flow Algorithms</title>
+		<title>Vertex shader effects</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 		<style>
@@ -28,19 +28,13 @@
 				margin: auto;
 			}
 
-			#index_space_view {
+			#index_space_view_1 {
 				width: 7in;
 				height: 7in;
 				margin: auto;
 			}
 
-			#wavefront_view_1 {
-				width: 7in;
-				height: 7in;
-				margin: auto;
-			}
-
-			#wavefront_view_2 {
+			#index_space_view_2 {
 				width: 7in;
 				height: 7in;
 				margin: auto;
@@ -66,47 +60,6 @@
 				color: #0080ff;
 			}
 
-			.math {
-
-				text-align: center;
-
-			}
-
-			.math-frac {
-
-				display: inline-block;
-				vertical-align: middle;
-
-			}
-
-			.math-num {
-
-				display: block;
-
-			}
-
-			.math-denom {
-
-				display: block;
-				border-top: 1px solid;
-
-			}
-
-			.math-sqrt {
-
-				display: inline-block;
-				transform: scale(1, 1.3);
-
-			}
-
-			.math-sqrt-stem {
-
-				display: inline-block;
-				border-top: 1px solid;
-				margin-top: 5px;
-
-			}
-
 		</style>
 	</head>
 	<body>
@@ -119,7 +72,6 @@
 		<script src="js/controls/OrbitControls.js"></script>
 		<script src="js/Detector.js"></script>
 		<script src="js/lib/numeric-1.2.6.js"></script>
-
 		<script type="x-shader/x-vertex" id="vertexshader">
 
 			attribute float size;
@@ -157,52 +109,11 @@
 				vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
 
 				// scale particles as objects in 3D space that modulate in size as a computational wavefront passes through
-				float period = mod(time, cardinality);  // set a modulo range so the visualization cycles
-
-				// modulate a full sinusoid long: (sin(-pi/2), sin(3*pi/2))
+				float period = mod(time, cardinality);   // set a modulo range so that the visualization cycles around
 				if (period > (schedule - 1.0) && period < (schedule + 1.0)) {
-
 				    gl_PointSize = (1.5 + sin((period - schedule)*3.14 + 1.57)) * ( 300.0 / length( mvPosition.xyz ) );
-
 				} else {
-
 				    gl_PointSize = size * ( 100.0 / -mvPosition.z );
-
-				}
-
-				gl_Position = projectionMatrix * mvPosition;
-
-			}
-
-		</script>
-
-		<script type="x-shader/x-vertex" id="wavefrontshader2">
-			uniform float time;
-			uniform float cardinality;
-			attribute float schedule;
-			attribute float size;
-			attribute vec3 customColor;
-
-			varying vec3 vColor;
-
-			void main() {
-
-				vColor = customColor;
-
-				vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
-
-				// scale particles as objects in 3D space that modulate in size as a computational wavefront passes through
-				float period = mod(time, cardinality);  // set a modulo range so the visualization cycles
-
-				// modulate a full sinusoid long: (sin(-pi/2), sin(3*pi/2))
-				if (period > (schedule - 1.0) && period < (schedule + 1.0)) {
-
-				    gl_PointSize = (1.5 + sin((period - schedule)*3.14 + 1.57)) * ( 300.0 / length( mvPosition.xyz ) );
-
-				} else {
-
-				    gl_PointSize = size * ( 100.0 / -mvPosition.z );
-
 				}
 
 				gl_Position = projectionMatrix * mvPosition;
@@ -235,8 +146,8 @@
 			var scenes = [];
 			var views = [];
 			var t, canvas, renderer;
-			var PARTICLE_SIZE = 2;
 			var clock = new THREE.Clock( true );
+			var PARTICLE_SIZE = 2.0;
 
 			window.onload = init;
 
@@ -247,77 +158,42 @@
                 renderer.setClearColor( 0xffffff );
                 renderer.setPixelRatio( window.devicePixelRatio );
 
-                views.push( document.getElementById( 'index_space_view' ) );
-                views.push( document.getElementById( 'wavefront_view_1' ) );
-                views.push( document.getElementById( 'wavefront_view_2' ) );
+                views.push( document.getElementById( 'index_space_view_1' ) );
+                views.push( document.getElementById( 'index_space_view_2' ) );
 
-				{ // views[0] = index_space_view
-                    var lattice = createIndexSpaceGeometry(20, 20, 20, 1, true);
+
+                { // views[0]
+                    var lattice = createIndexSpaceGeometry(10, 10, 10, 1, true);
                     var pointSize = PARTICLE_SIZE * 0.5;
                     var scene = createIndexSpaceScene( lattice, pointSize );
                     scene.userData.view = views[0];
 
                     // PerspectiveCamera ( fov, aspectRatio, near clipping plane, var clipping plane )
                     var camera = new THREE.PerspectiveCamera( 75, 1, 0.1, 1000 );
-                    camera.position.set( 0, 0, 25 );   // ( x = 0, y = 0, z = 25 )
+                    camera.position.set( 0, 0, 15 );   // ( x = 0, y = 0, z = 15 )
                     scene.userData.camera = camera;
 
                     var controls = new THREE.OrbitControls( camera, views[0] );
-                    controls.minDistance = 20;   // zoom can't zoom in further than z = 20
+                    controls.minDistance = 0;   // zoom can't zoom in further than z = 0
                     controls.maxDistance = 500;   // zoom can't zoom out further than z = 500
                     scene.userData.controls = controls;
 
                     scenes.push( scene );
-				}
+                }
 
-				{ // views[1] = wavefront_view_1
-                    var lattice = createIndexSpaceGeometry(20, 20, 20, 1, false);
+                { // views[1]
+                    var lattice = createIndexSpaceGeometry(10, 10, 10, 1, true);
                     var pointSize = PARTICLE_SIZE * 0.5;
-
-                    // cardinality of the simulation is from [3, 60]
-                    uniforms1 = {
-                        cardinality: { value: 60.0 },
-                        time:        { value: 1.0 },
-                        color:       { value: new THREE.Color( 0xffffff ) },
-                        texture:     { value: new THREE.TextureLoader().load( "textures/sprites/ball.png" ) }
-                    };
-                    var scene = createWavefrontScene( lattice, pointSize, 'wavefrontshader', uniforms1 );
+                    var scene = createWavefrontScene( lattice, pointSize );
                     scene.userData.view = views[1];
 
                     // PerspectiveCamera ( fov, aspectRatio, near clipping plane, var clipping plane )
                     var camera = new THREE.PerspectiveCamera( 75, 1, 0.1, 1000 );
-                    camera.position.set( 25, 25, 25 );   // ( x = 25, y = 25, z = 25 )
+                    camera.position.set( 0, 0, 15 );   // ( x = 0, y = 0, z = 15 )
                     scene.userData.camera = camera;
 
                     var controls = new THREE.OrbitControls( camera, views[1] );
-                    controls.minDistance = 20;   // zoom can't zoom in further than z = 20
-                    controls.maxDistance = 500;   // zoom can't zoom out further than z = 500
-                    scene.userData.controls = controls;
-
-                    scenes.push( scene );
-				}
-
-                { // views[2] = wavefront_view_2
-                    var lattice = createIndexSpaceGeometry(20, 20, 20, 1, false);
-                    var pointSize = PARTICLE_SIZE * 0.5;
-
-                    // cardinality of the simulation is from [3, 60]
-                    uniforms2 = {
-                        cardinality: { value: 60.0 },
-                        time:        { value: 1.0 },
-                        color:       { value: new THREE.Color( 0xffffff ) },
-                        texture:     { value: new THREE.TextureLoader().load( "textures/sprites/ball.png" ) }
-                    };
-                    var scene = createWavefrontScene( lattice, pointSize, 'wavefrontshader2', uniforms2 );
-                    scene.userData.view = views[2];
-
-                    // PerspectiveCamera ( fov, aspectRatio, near clipping plane, var clipping plane )
-                    var camera = new THREE.PerspectiveCamera( 75, 1, 0.1, 1000 );
-                    camera.position.set( 25, 25, 25 );   // ( x = 25, y = 25, z = 25 )
-                    scene.userData.camera = camera;
-
-                    var controls = new THREE.OrbitControls( camera, views[2] );
-                    controls.minDistance = 20;   // zoom can't zoom in further than z = 20
+                    controls.minDistance = 0;   // zoom can't zoom in further than z = 200
                     controls.maxDistance = 500;   // zoom can't zoom out further than z = 500
                     scene.userData.controls = controls;
 
@@ -377,8 +253,7 @@
 					renderer.setViewport( left, bottom, width, height );
 					renderer.setScissor( left, bottom, width, height );
 
-					uniforms1.time.value = t;
-					uniforms2.time.value = t;
+					uniforms.time.value = t;
 					renderer.render( scene, scene.userData.camera );
 
 					scene.children[0].geometry.verticesNeedUpdate = true;
@@ -457,7 +332,7 @@
                 return scene;
             }
 
-            function createWavefrontScene( lattice, pointSize, shader, uniforms ) {
+            function createWavefrontScene( lattice, pointSize ) {
                 var scene = new THREE.Scene();
                 // var geometry1 = new THREE.BoxGeometry( 200, 200, 200, 16, 16, 16 );
                 var vertices = lattice.vertices;
@@ -488,10 +363,16 @@
                 geometry.addAttribute( 'size', new THREE.BufferAttribute( sizes, 1 ) );
                 geometry.addAttribute( 'schedule', new THREE.BufferAttribute( timing, 1 ) );
 
+                uniforms = {
+                    cardinality: { value: 10.0 },
+					time:        { value: 1.0 },
+                    color:       { value: new THREE.Color( 0xffffff ) },
+                    texture:     { value: new THREE.TextureLoader().load( "textures/sprites/ball.png" ) }
+                };
 
                 var material = new THREE.ShaderMaterial( {
                     uniforms: uniforms,
-                    vertexShader: document.getElementById( shader ).textContent,
+                    vertexShader: document.getElementById( 'wavefrontshader' ).textContent,
                     fragmentShader: document.getElementById( 'fragmentshader' ).textContent,
 
                     alphaTest: 0.9
@@ -507,102 +388,10 @@
 
 		<h1>Introduction to Domain Flow Algorithms</h1>
 		<p>
-			Domain Flow algorithms are parallel algorithms that incorporate the constraints of space and time.
-			By honoring the delay that is inherent to the operation of information exchange between two physically
-			separate computation or storage sites, domain flow algorithms can improve performance, and most
-			importantly, lower energy consumption, as compared to computational models that are based on sequential
-			execution.
-
-			These benefits are particularly important for embedded, real-time applications, such as computer vision,
-			sensor fusion, and in general, autonomous intelligent systems.
-		</p>
-
-
-		<p>
-			Let's take a look at an example of a simple, but valuable operator: dense matrix multiplication.
-			A Domain Flow Algorithm for matrix multiply is shown here:
-		</p>
-
-		<pre><code>
-			compute ( (i,j,k) | 1 <= i,j,k <= N ) {
-				a: a[i,j-1,k]
-				b: b[i-1,j,k]
-				c: c[i,j,k-1] + a[i,j-1,k] * b[i-1,j,k]
-			}
-		</code></pre>
-
-		<p>
-			This algorithm defines a domain of computation governed by a set of constraints, and a set of
-			computational dependencies that implicitly define a partial order. For example, we can't execute the result
-			for c[i,j,k] until we have computed the result for c[i,j,k-1].
-		</p>
-
-		<p>
-			From an algorithm design perspective, an explicit dependency allows us to 'order' the
-			computational graph. This can be done in time, as is customary in sequential programming, where
-			we treat the dependency as an opportunity to sequence computations so that they can be executed
-			by a single computational unit that is reused. But for parallel algorithms, we can also
-			use this dependency to order the computational events in space. In the parallel design perspective,
-			we are looking for (partial) orders where independent computational events are physically separated
-			in space.
-		</p>
-
-		<p>
-			If we look back again at the domain flow algorithm of matrix multiply, we observe that all results
-			are assigned to a unique variable. This is called Single Assignment Form, and this yields a
-			computational graph that makes all computational dependencies explicit.
-
-			The second observation is that the computational events are made unique with a variable name and
-			an index tag, such as [i,j,k]. Thirdly, dependencies between computational events are specified
-			by an index expression, such as [i,j-1,k].
-		</p>
-
-		<h2>Why are Domain Flow Algorithms specified this way?</h2>
-
-		<p>
-			To appreciate the domain flow algorithms and what they enable, you need to think about the physical
-			form a 'program evaluator', or processor, could take. In the days when a processor occupied the volume
-			of a small room, any physical computational machine was limited to a single computational element.
-			This implied that the execution of any algorithm had to be specified as a complete order in time.
-			At each step of the execution, the computational element would need to read the input operands, execute
-			an instruction, and write the results back. The reading and writing of operands was from and to a
-			Random Access Memory.
-		</p>
-
-		<p>
-			This sequential approach has been very successful, as it is a general purpose mechanism to execute
-			any algorithm. But it is not the most energy efficient approach to execute all algorithms. This is
-			the niche that domain flow fills: algorithms that exhibit complex, inherently parallel, but geometrically
-			constrained concurrency patterns offer the opportunity to be evaluated in a more energy efficient manner.
-			The venerable matrix multiply is a good introduction to this class of algorithms,
-			more formally defined by the term <i>systems of affine recurrence equations</i>.
-		</p>
-
-		<p>
-			To arrive at the underlying execution model of domain flow algorithms, we take the other extreme compared
-			to fully sequential execution.
-			Remember, nodes in the graph represent computational events, and links in the graph represent information exchanges.
-			Imagine that we have as many computational resources as there are nodes in the single assignment form
-			computational graph. In that case, we can simple 'embed' the computational graph in 3D space.
-			However, since a physical machine that would be able to evaluate a node in the graph will have
-			some physical extent, a collection of physical nodes will fill 3D space in some 'regular', crystalline
-			pattern. Or if we are conceptualizing the space presented by a VLSI chip's surface, it will be a 2D space.
-			These crystalline patterns are typically referred to as a <i>lattice</i>, and thus
-			the design of a domain flow algorithm is the act of finding space, time, and energy efficient embeddings
-			of some computational graph in N-dimensional space.
-		</p>
-
-		<p>
-			Back to our matrix multiply. We can now reinterpret the domain flow algorithm as a physical embedding.
-			Each index range, that is, the i, j, and k in the constraint set, can be seen as a dimension in 3D space.
-			The index tag, such as [i,j,k] can then be interpreted as a location in 3D space, more accurately,
-			a location in the 3D Cartesian lattice.
-		</p>
-		<p>
 			This is what that lattice looks like for a given N:
 		</p>
 
-		<div id="index_space_view">_</div>
+		<div id="index_space_view_1">_</div>
 
 		<p>
 			We alluded to the fact that inherently-parallel algorithms exhibit some partial order and not a complete order
@@ -625,32 +414,7 @@
 			The free schedule for our matrix multiply is visualized in the following simulation.
 		</p>
 
-		<div id="wavefront_view_1">_</div>
-
-		<p>
-			But a physical system wouldn't have infinite resources, and certainly not infinite bandwidth.
-			The free schedule of a parallel algorithm tends to be unrealizable.
-			Let's go through the thought experiment what the free schedule requires of a physical system.
-			In the free schedule animation, the propagation recurrences distributing the A and B matrix elements
-			throughout the 3D lattice run 'ahead' of the actual computational recurrence calculating the C matrix
-			elements.
-			The A and B elements arrive at their destination earlier than the time they are consumed by a
-			computational event. A physical system would need to have memory to hold these early operands until
-			all of the operands are present and the computation can commence. The extra memory required to hold
-			these operands is consuming area and energy and thus an attribute that an algorithm designer
-			would want to optimize out of the system.
-		</p>
-		<p>
-			Looking more closely at the wavefront that expresses the evolution of the C matrix elements, we
-			can observe that the wavefront evolves as a 2D plane with normal <i>{1 1 1]<sup>T</sup></i>.
-			This implies that if we <i>constrain</i> the A and B propagations to evolve along this same wavefront
-			then all memory requirements would disappear as we deliver the A and B matrix elements just in time
-			to participate in the computational event c: c[i,j,k] + a[i,j-1,k] * b[i-1, j,k].
-		</p>
-		<p>
-			This constrained, <i>linear</i> schedule is shown in the next animation.
-		</p>
-		<div id="wavefront_view_2">_</div>
+		<div id="index_space_view_2">_</div>
 
 	</body>
 </html>
