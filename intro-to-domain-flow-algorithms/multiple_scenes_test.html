@@ -157,7 +157,7 @@
                 });
             }
 
-            function createIndexSpaceScene( nrOfPoints, pointSize, circle ) {
+            function createIndexSpaceScene( nrOfPoints, pointSize, pointShape ) {
 
                 var scene = new THREE.Scene();
                 var lattice = new THREE.Geometry();
@@ -172,7 +172,7 @@
                 }
 
                 // set the material properties for the vertices
-                var material = new THREE.PointsMaterial( { size: pointSize, map: circle, transparent: true, alphaTest: 0.1 } );
+                var material = new THREE.PointsMaterial( { size: pointSize, map: pointShape, transparent: true, alphaTest: 0.1 } );
                 scene.add( new THREE.Points( lattice, material ) );
 
                 return scene;

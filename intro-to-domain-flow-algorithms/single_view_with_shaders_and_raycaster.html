@@ -164,16 +164,12 @@
             function render() {
                 updateSize();
 
-                /*
                 renderer.setClearColor( 0xffffff );
                 renderer.setScissorTest( false );
                 renderer.clear();
 
                 renderer.setClearColor( 0x000000 );
                 renderer.setScissorTest( true );
-                */
-
-
 
                 scenes.forEach( function( scene ) {
                     var rect = scene.userData.view.getBoundingClientRect();

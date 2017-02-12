@@ -112,6 +112,8 @@
 		<script src="js/build/three.js"></script>
 		<script src="js/controls/OrbitControls.js"></script>
 		<script src="js/Detector.js"></script>
+		<script src="js/lib/numeric-1.2.6.js"></script>
+
 		<script type="x-shader/x-vertex" id="vertexshader">
 
 			attribute float size;
@@ -126,6 +128,35 @@
 				vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
 
 				gl_PointSize = size * ( 300.0 / -mvPosition.z );
+
+				gl_Position = projectionMatrix * mvPosition;
+
+			}
+
+		</script>
+
+		<script type="x-shader/x-vertex" id="wavefrontshader">
+			uniform float time;
+			uniform float cardinality;
+			attribute float schedule;
+			attribute float size;
+			attribute vec3 customColor;
+
+			varying vec3 vColor;
+
+			void main() {
+
+				vColor = customColor;
+
+				vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+
+				// scale particles as objects in 3D space that modulate in size as a computational wavefront passes through
+				float period = mod(time, cardinality);
+				if (period > (schedule - 5.0) && period < (schedule + 5.0)) {
+				    gl_PointSize = (1.5 + sin((period - schedule)*3.14 + 1.57)) * ( 3000.0 / length( mvPosition.xyz ) );
+				} else {
+				    gl_PointSize = size * ( 100.0 / -mvPosition.z );
+				}
 
 				gl_Position = projectionMatrix * mvPosition;
 
@@ -171,16 +202,37 @@
                 views.push( document.getElementById( 'index_space_view_1' ) );
                 views.push( document.getElementById( 'index_space_view_2' ) );
 
-                for ( var i = 0; i < views.length; i++ ) {
-                    var scene = createIndexSpaceScene();
-                    scene.userData.view = views[i];
+				{ // views[0]
+                    var lattice = createIndexSpaceGeometry(20, 20, 20, 10, true);
+                    var pointSize = PARTICLE_SIZE * 0.5;
+                    var scene = createIndexSpaceScene( lattice, pointSize );
+                    scene.userData.view = views[0];
 
                     // PerspectiveCamera ( fov, aspectRatio, near clipping plane, var clipping plane )
                     var camera = new THREE.PerspectiveCamera( 75, 1, 0.1, 10000 );
                     camera.position.set( 0, 0, 250 );   // ( x = 0, y = 0, z = 250 )
                     scene.userData.camera = camera;
 
-                    var controls = new THREE.OrbitControls( camera, views[i] );
+                    var controls = new THREE.OrbitControls( camera, views[0] );
+                    controls.minDistance = 200;   // zoom can't zoom in further than z = 200
+                    controls.maxDistance = 500;   // zoom can't zoom out further than z = 500
+                    scene.userData.controls = controls;
+
+                    scenes.push( scene );
+				}
+
+				{ // views[1]
+                    var lattice = createIndexSpaceGeometry(20, 20, 20, 10, true);
+                    var pointSize = PARTICLE_SIZE * 0.5;
+                    var scene = createWavefrontScene( lattice, pointSize );
+                    scene.userData.view = views[1];
+
+                    // PerspectiveCamera ( fov, aspectRatio, near clipping plane, var clipping plane )
+                    var camera = new THREE.PerspectiveCamera( 75, 1, 0.1, 10000 );
+                    camera.position.set( 0, 0, 250 );   // ( x = 0, y = 0, z = 250 )
+                    scene.userData.camera = camera;
+
+                    var controls = new THREE.OrbitControls( camera, views[1] );
                     controls.minDistance = 200;   // zoom can't zoom in further than z = 200
                     controls.maxDistance = 500;   // zoom can't zoom out further than z = 500
                     scene.userData.controls = controls;
@@ -207,10 +259,16 @@
 				requestAnimationFrame( animate );
 			}
 
+            function schedule( index ) {
+                var tau = [1,1,1];
+                var seqNr = numeric.dot(tau, index);
+                return seqNr;
+            }
+
 			function render() {
 				updateSize();
 
-				// the ScissorTest machinery is needed to make the viewport clipping to work properly.
+				// the ScissorTest machinery is needed to make the viewport clipping work properly.
 				renderer.setClearColor( 0xffffff );
 				renderer.setScissorTest( false );
 				renderer.clear();
@@ -221,7 +279,6 @@
 				scenes.forEach( function( scene ) {
 
 					var rect = scene.userData.view.getBoundingClientRect();
-
 					// check if it's off-screen. If so skip it
 					if ( rect.bottom < 0 || rect.top  > renderer.domElement.clientHeight ||
 						 rect.right  < 0 || rect.left > renderer.domElement.clientWidth ) {
@@ -236,6 +293,7 @@
 					renderer.setViewport( left, bottom, width, height );
 					renderer.setScissor( left, bottom, width, height );
 
+					uniforms.time.value = t;
 					renderer.render( scene, scene.userData.camera );
 
 					scene.children[0].geometry.verticesNeedUpdate = true;
@@ -245,10 +303,34 @@
 				t ++;
 			}
 
-            function createIndexSpaceScene() {
+			function createIndexSpaceGeometry( N, M, K, cellSize, center ) {
+			    var lattice = new THREE.Geometry();
+
+			    if (center) {
+                    for ( var i = -N/2; i <= N/2; i++ ) {
+                        for ( var j = -M/2; j <= M/2; j++ ) {
+                            for ( var k = -K/2; k <= K/2; k++ ) {
+                                lattice.vertices.push( new THREE.Vector3( i * cellSize, j * cellSize, k * cellSize ) );
+                            }
+                        }
+                    }
+				} else {
+                    for ( var i = 0; i < N; i++ ) {
+                        for ( var j = 0; j < M; j++ ) {
+                            for ( var k = 0; k < K; k++ ) {
+                                lattice.vertices.push( new THREE.Vector3( i * cellSize, j * cellSize, k * cellSize ) );
+                            }
+                        }
+                    }
+				}
+
+				return lattice;
+			}
+
+            function createIndexSpaceScene( lattice, pointSize ) {
                 var scene = new THREE.Scene();
-                var geometry1 = new THREE.BoxGeometry( 200, 200, 200, 16, 16, 16 );
-                var vertices = geometry1.vertices;
+                // var geometry1 = new THREE.BoxGeometry( 200, 200, 200, 16, 16, 16 );
+                var vertices = lattice.vertices;
 
                 var positions = new Float32Array( vertices.length * 3 );
                 var colors    = new Float32Array( vertices.length * 3 );
@@ -264,7 +346,7 @@
                     color.setHSL( 0.01 + 0.1 * ( i / l ), 1.0, 0.5 );
                     color.toArray( colors, i * 3 );
 
-                    sizes[ i ] = PARTICLE_SIZE * 0.5;
+                    sizes[ i ] = pointSize;
                 }
 
                 var geometry = new THREE.BufferGeometry();
@@ -277,7 +359,60 @@
                         color:    { value: new THREE.Color( 0xffffff ) },
                         texture:  { value: new THREE.TextureLoader().load( "textures/sprites/ball.png" ) }
                     },
+
                     vertexShader: document.getElementById( 'vertexshader' ).textContent,
+                    fragmentShader: document.getElementById( 'fragmentshader' ).textContent,
+
+                    alphaTest: 0.9
+                } );
+
+                particles = new THREE.Points( geometry, material );
+                scene.add( particles );
+
+                return scene;
+            }
+
+            function createWavefrontScene( lattice, pointSize ) {
+                var scene = new THREE.Scene();
+                // var geometry1 = new THREE.BoxGeometry( 200, 200, 200, 16, 16, 16 );
+                var vertices = lattice.vertices;
+
+                var positions = new Float32Array( vertices.length * 3 );
+                var colors    = new Float32Array( vertices.length * 3 );
+                var sizes     = new Float32Array( vertices.length );
+                var timing    = new Float32Array( vertices.length );
+
+                var vertex;
+                var color = new THREE.Color();
+
+                for ( var i = 0, l = vertices.length; i < l; i++ ) {
+                    vertex = vertices[i];
+                    vertex.toArray( positions, i * 3 );
+
+                    color.setHSL( 0.01 + 0.1 * ( i / l ), 1.0, 0.5 );
+                    color.toArray( colors, i * 3 );
+
+                    sizes[ i ] = pointSize;
+
+                    timing[ i ] = schedule( [ vertex.x, vertex.y, vertex.z ]);
+                }
+
+                var geometry = new THREE.BufferGeometry();
+                geometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
+                geometry.addAttribute( 'customColor', new THREE.BufferAttribute( colors, 3 ) );
+                geometry.addAttribute( 'size', new THREE.BufferAttribute( sizes, 1 ) );
+                geometry.addAttribute( 'schedule', new THREE.BufferAttribute( timing, 1 ) );
+
+                uniforms = {
+                    cardinality: { value: 300.0 },
+					time:        { value: 1.0 },
+                    color:       { value: new THREE.Color( 0xffffff ) },
+                    texture:     { value: new THREE.TextureLoader().load( "textures/sprites/ball.png" ) }
+                };
+
+                var material = new THREE.ShaderMaterial( {
+                    uniforms: uniforms,
+                    vertexShader: document.getElementById( 'wavefrontshader' ).textContent,
                     fragmentShader: document.getElementById( 'fragmentshader' ).textContent,
 
                     alphaTest: 0.9
